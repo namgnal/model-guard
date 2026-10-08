@@ -1,0 +1,16 @@
+{
+  "repository": "https://github.com/xqy2006/ModelTrace",
+  "commit": "df3a0f9d3e054c0dc02d6d586686db8daf8fa7c8",
+  "license": "MIT",
+  "modified": false,
+  "sha256": {
+    "app-server-client.mjs": "5f5669b7220596d8a398c90fc64bf5d9b8f662b3f913fa3134e01cecccbf0f36",
+    "fingerprint-core.mjs": "83fa5bd611e18f8339122582335123c8ea168ed242298bb31f4e363abeeb6e4a",
+    "LICENSE": "4812aaf2fc8971c97c8e054f7cecb16486f903d5c5b181ea48304c12182a11e7",
+    "prompts.mjs": "2e517c7c7a85096d6b90ddf6a979bf6f0ed9dede218d25575dc74efda839d88a",
+    "protocol-lines.mjs": "ceb9478844c79d3bd8ea3ac0b0a4cdd6edff7b14426f945d90a4cdc0fad5e61a",
+    "unified_bank.json": "1c2cb74d372f9f0f30d0dabbb7b7a838660d2f769a88d0c8489e4c662e088c21"
+  },
+  "checkedAt": "2026-09-30",
+  "modelCount": 16
+}

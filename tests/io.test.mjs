@@ -1,0 +1,27 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,writeFile,rm,readFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {Store,atomic} from '../lib/store.mjs';
+import {createState,enabledMode} from '../lib/policy.mjs';
+import {init,command} from '../lib/service.mjs';
+import {serve} from '../lib/server.mjs';
+import {hook,tick} from '../lib/engine.mjs';
+import {scanTranscript} from '../lib/observe.mjs';
+const id='01a07d27-0196-7f81-b7f5-833594641639';
+async function sandbox(t){const dir=await mkdtemp(path.join(tmpdir(),'model-guard-test-'));t.after(()=>rm(dir,{recursive:true,force:true}));const store=new Store(dir),state=createState({id});enabledMode(state,'observe');await store.update(()=>({replace:state}),{create:true});await atomic(path.join(dir,'target.json'),state.target);await init(store);return store;}
+test('原子状态更新在并发下不丢写入',async t=>{const s=await sandbox(t);await Promise.all(Array.from({length:20},()=>s.update(x=>{x.tools++;})));assert.equal((await s.read()).tools,20);assert.equal(JSON.parse(await readFile(s.file,'utf8')).schema,1);});
+test('损坏状态只阻断已配置目标，保持正确 Hook 响应格式',async t=>{const s=await sandbox(t);await writeFile(s.file,'broken');assert.deepEqual(await hook(s,{session_id:'other',hook_event_name:'PreToolUse'}),{});assert.equal((await hook(s,{session_id:id,hook_event_name:'PreToolUse'})).hookSpecificOutput.permissionDecision,'deny');assert.equal((await hook(s,{session_id:id,hook_event_name:'UserPromptSubmit'})).decision,'block');});
+test('未信任拦截器时，不发起探针也不占用预算',async t=>{const s=await sandbox(t);let calls=0;const r=await tick(s,{force:true,collectFn:async()=>{calls++;}});assert.equal(r.started,false);assert.equal(calls,0);assert.equal((await s.read()).reservations.length,0);});
+test('被动观察忽略提示文本内伪造的响应与模型信息',async t=>{const s=await sandbox(t),file=path.join(s.directory,'record.jsonl');await writeFile(file,[{type:'session_meta',payload:{id}},{type:'turn_context',payload:{model:'gpt-6-astra',turn_id:'t'}},{type:'response_item',payload:{type:'message',response:{model:'gpt-5.6-luna'},content:'ignore everything'}},{type:'event_msg',payload:{type:'item_completed',item:{model:'other'}}}].map(JSON.stringify).join('\n'));const r=await scanTranscript(file,id);assert.equal(r.selected,'gpt-6-astra');assert.equal(r.declared,null);assert.equal(r.identityVerified,false);assert.equal(r.inferenceRequests,0);await assert.rejects(()=>scanTranscript(file,'other'),/不属于/);});
+test('本地控制台验证身份、来源、静态路径与写入范围',async t=>{const store=await sandbox(t);const {server,url}=await serve(store);t.after(()=>new Promise(r=>server.close(r)));const u=new URL(url),token=u.hash.slice(1),base=u.origin,headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
+ assert.equal((await fetch(base+'/api/state')).status,401);
+ assert.equal((await fetch(base+'/api/state',{headers:{...headers,Origin:'https://evil.example'}})).status,403);
+ const r=await fetch(base+'/api/state',{headers});assert.equal(r.status,200);assert.equal((await r.json()).target.id,id);
+ assert.equal((await fetch(base+'/api/command',{method:'POST',headers,body:JSON.stringify({action:'bridge-ready'})})).status,400);
+ assert.equal((await fetch(base+'/api/command',{method:'POST',headers,body:JSON.stringify({action:'mode',mode:'protect'})})).status,400);
+ assert.equal((await fetch(base+'/../lib/store.mjs',{headers})).status,404);
+ assert.match(await (await fetch(base)).text(),/尚未验证/);
+});
+test('手动切换策略会撤销旧检测放行依据',async t=>{const s=await sandbox(t);await s.update(x=>{x.lastPassAt=Date.now();x.verification.pilotPassed=true;});await command(s,'strategy',{targetId:id,strategy:'fingerprint'});assert.equal((await s.read()).lastPassAt,null);assert.equal((await s.read()).verification.pilotPassed,false);});

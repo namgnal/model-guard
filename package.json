@@ -1,0 +1,74 @@
+{
+  "name": "model-guard",
+  "version": "0.3.0",
+  "private": true,
+  "description": "守望 · 本地模型监测台",
+  "author": "Model Guard",
+  "license": "MIT",
+  "type": "module",
+  "main": "desktop/main.mjs",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "start": "node scripts/guard.mjs serve",
+    "test": "node --test tests/*.test.mjs",
+    "doctor": "node scripts/guard.mjs doctor",
+    "status": "node scripts/guard.mjs status",
+    "desktop": "node scripts/desktop-dev.mjs",
+    "desktop:prepare": "node scripts/prepare-desktop.mjs",
+    "desktop:pack": "npm run desktop:prepare && electron-builder --win --x64 --dir",
+    "desktop:build": "npm run desktop:prepare && electron-builder --win nsis --x64",
+    "desktop:install": "powershell.exe -NoProfile -File scripts/install-desktop.ps1"
+  },
+  "build": {
+    "appId": "local.modelguard.desktop",
+    "productName": "Model Guard",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "desktop/**/*",
+      "lib/desktop-launcher.mjs",
+      "assets/icon.ico",
+      "assets/icon.png",
+      "package.json",
+      "LICENSE"
+    ],
+    "extraResources": [
+      {
+        "from": ".desktop-build/runtime",
+        "to": "runtime"
+      },
+      {
+        "from": ".desktop-build/service",
+        "to": "service"
+      }
+    ],
+    "npmRebuild": false,
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico",
+      "executableName": "Model Guard"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "守望 Model Guard",
+      "uninstallDisplayName": "守望 Model Guard",
+      "runAfterFinish": false,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Model-Guard-Setup-${version}-${arch}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  }
+}

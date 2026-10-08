@@ -1,0 +1,17 @@
+{
+  "name": "model-guard",
+  "version": "0.3.0",
+  "description": "观察目标任务的模型信号，验证通过后可启用工具拦截。默认不发起指纹请求。",
+  "author": {
+    "name": "namgnal"
+  },
+  "interface": {
+    "displayName": "守望 · Model Guard",
+    "shortDescription": "轻量观察模型信号，先验证再接管。",
+    "longDescription": "本地模型观察与暂停门控。上游声明和行为指纹分别记录；原生接口未提供时显示未知。不会改动账号、代理或模型选择。",
+    "developerName": "namgnal",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "查看守望的检测结果与接管准备状态。"
+  }
+}
